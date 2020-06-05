@@ -5,6 +5,7 @@ import { external, inject } from "tsdi";
 import { Game } from "../../game";
 import "./game-phase-decision.scss";
 import { computed } from "mobx";
+import { GameTracks } from "../game-tracks";
 
 export interface GamePhaseDecisionProps {
     className?: string;
@@ -22,6 +23,7 @@ export class GamePhaseDecision extends React.Component<GamePhaseDecisionProps> {
     public render(): JSX.Element {
         return (
             <div className={this.classNames}>
+                <GameTracks />
             </div>
         );
     }

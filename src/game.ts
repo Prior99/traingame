@@ -10,7 +10,6 @@ import {
     AppUser,
     MessageType,
     MessageGameState,
-    MessageWelcome,
     MessageStartGame,
     MessageCardRescue,
     MessageCardSwap,
@@ -40,6 +39,7 @@ export const enum LoadingFeatures {
     CARD_RESCUE = "card rescue",
     CARD_SWAP = "card swap",
     CARD_ADD = "card add",
+    CARD_ADD_MODIFIER = "card add modifier",
     CARD_KILL = "card kill",
     DECIDE = "decide",
 }
@@ -54,6 +54,7 @@ export interface Card {
     cardType: CardType;
     userId: string;
     track: Track;
+    removed: boolean;
 }
 
 export interface Modifier {
@@ -115,6 +116,18 @@ export class Game {
         return this.getUser(this.userId);
     }
 
+    @computed public get canAddModifier(): boolean {
+        return (
+            this.phase === GamePhase.WRITE_MODIFIERS &&
+            !Array.from(this.modifiers.values()).some((modifier) => modifier.userId === this.userId) &&
+            !this.isConductor
+        );
+    }
+
+    @computed public get conductor(): AppUser | undefined {
+        return this.userList.find((user) => this.isUserConductor(user.id));
+    }
+
     public getUser(userId: string): AppUser | undefined {
         return this.peer?.getUser(userId);
     }
@@ -151,7 +164,7 @@ export class Game {
         }
     }
 
-    public async sendRescue(cardId: string): Promise<void> {
+    public async sendCardRescue(cardId: string): Promise<void> {
         if (!this.messageCardRescue) {
             throw new Error("Network not initialized.");
         }
@@ -172,6 +185,18 @@ export class Game {
             await this.messageCardSwap.send({ cardIds }).waitForAll();
         } finally {
             this.loading.delete(LoadingFeatures.CARD_SWAP);
+        }
+    }
+
+    public async sendCardAddModifier(title: string, cardId: string): Promise<void> {
+        if (!this.messageCardAddModifier) {
+            throw new Error("Network not initialized.");
+        }
+        this.loading.add(LoadingFeatures.CARD_ADD_MODIFIER);
+        try {
+            await this.messageCardAddModifier.send({ modifierId: v4(), title, cardId }).waitForAll();
+        } finally {
+            this.loading.delete(LoadingFeatures.CARD_ADD_MODIFIER);
         }
     }
 
@@ -232,6 +257,20 @@ export class Game {
 
     @computed public get isConductor(): boolean {
         return this.isUserConductor(this.userId);
+    }
+
+    public cardsOnTrack(track: Track): Card[] {
+        return Array.from(this.cards.values())
+            .filter((card) => card.track === track)
+            .sort((a, b) => {
+                if (a.cardType === b.cardType) {
+                    return a.cardId.localeCompare(b.cardId);
+                }
+                if (a.cardType === CardType.GOOD) {
+                    return -1;
+                }
+                return 1;
+            });
     }
 
     public isUserManiac(userId: string): boolean {
@@ -334,15 +373,33 @@ export class Game {
             }),
         );
         this.messageCardAdd.subscribe(({ title, cardId, cardType }, userId) => {
-            this.cards.set(cardId, { title, cardId, userId, cardType, track: this.getUserDefaultTrack(userId) });
-            if (this.cards.size < this.allManiacs.length) {
+            this.cards.set(cardId, {
+                title,
+                cardId,
+                userId,
+                cardType,
+                track: this.getUserDefaultTrack(userId),
+                removed: false,
+            });
+            if (
+                Array.from(this.cards.values()).filter((card) => {
+                    if (this.phase === GamePhase.WRITE_BAD) {
+                        return card.cardType === CardType.BAD;
+                    }
+                    return card.cardType === CardType.GOOD;
+                }).length < this.allManiacs.length
+            ) {
                 return;
             }
             if (this.phase === GamePhase.WRITE_GOOD) {
                 if (this.allManiacs.length % 2 !== 0) {
                     this.phase = GamePhase.RESCUE;
                 } else {
-                    this.phase = GamePhase.SWAP_CARDS;
+                    if (this.allManiacs.length >= 4) {
+                        this.phase = GamePhase.SWAP_CARDS;
+                    } else {
+                        this.phase = GamePhase.WRITE_BAD;
+                    }
                 }
             }
             if (this.phase === GamePhase.WRITE_BAD) {
@@ -359,7 +416,12 @@ export class Game {
                 throw new Error(`Unknown card: ${cardId}`);
             }
             this.handleRescue(card);
-            this.phase = GamePhase.SWAP_CARDS;
+            card.removed = true;
+            if (this.allManiacs.length >= 4) {
+                this.phase = GamePhase.SWAP_CARDS;
+            } else {
+                this.phase = GamePhase.WRITE_BAD;
+            }
         });
         this.messageCardSwap.subscribe(({ cardIds }, userId) => {
             cardIds.forEach((cardId) => {
@@ -380,6 +442,7 @@ export class Game {
                 throw new Error(`Unknown card: ${cardId}`);
             }
             this.handleKill(card);
+            card.removed = true;
             this.phase = GamePhase.WRITE_MODIFIERS;
         });
         this.messageCardAddModifier.subscribe(({ cardId, modifierId, title }, userId) => {

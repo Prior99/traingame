@@ -5,6 +5,7 @@ import { external, inject } from "tsdi";
 import { Game } from "../../game";
 import "./game-phase-write-modifiers.scss";
 import { computed } from "mobx";
+import { GameTracks } from "../game-tracks";
 
 export interface GamePhaseWriteModifiersProps {
     className?: string;
@@ -22,6 +23,10 @@ export class GamePhaseWriteModifiers extends React.Component<GamePhaseWriteModif
     public render(): JSX.Element {
         return (
             <div className={this.classNames}>
+                <div className="GamePhaseWriteModifiers__instructions">
+                    Add a modifier to <b>one</b> card of your choice.
+                </div>
+                <GameTracks className="GamePhaseWriteModifiers__tracks" />
             </div>
         );
     }

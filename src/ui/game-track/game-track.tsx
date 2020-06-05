@@ -62,7 +62,7 @@ export class GameTrack extends React.Component<GameTrackProps> {
                             onClick={this.props.onCardSelect ? () => this.props.onCardSelect!(card.cardId) : undefined}
                         />
                     ))}
-                {this.canKill && <div className="GameTrack__killer">Kill them all</div>}
+                <div className="GameTrack__killer">{this.game.decidedTrack ? "Killed!" : "Kill them all!"}</div>
             </div>
         );
     }

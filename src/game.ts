@@ -177,7 +177,7 @@ export class Game {
         }
     }
 
-    public async sendCardSwap(cardIds: [string, string]): Promise<void> {
+    public async sendCardSwap(cardIds?: [string, string]): Promise<void> {
         if (!this.messageCardSwap) {
             throw new Error("Network not initialized.");
         }
@@ -476,13 +476,15 @@ export class Game {
             }
         });
         this.messageCardSwap.subscribe(({ cardIds }, userId) => {
-            cardIds.forEach((cardId) => {
-                const card = this.cards.get(cardId);
-                if (!card) {
-                    throw new Error(`Unknown card: ${cardId}`);
-                }
-                card.track = card.track === Track.TRACK_A ? Track.TRACK_B : Track.TRACK_A;
-            });
+            if (cardIds) {
+                cardIds.forEach((cardId) => {
+                    const card = this.cards.get(cardId);
+                    if (!card) {
+                        throw new Error(`Unknown card: ${cardId}`);
+                    }
+                    card.track = card.track === Track.TRACK_A ? Track.TRACK_B : Track.TRACK_A;
+                });
+            }
             this.swapped.add(userId);
             if (this.allManiacs.every(({ id }) => this.swapped.has(id))) {
                 this.phase = GamePhase.WRITE_BAD;

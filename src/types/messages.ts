@@ -55,7 +55,7 @@ export interface MessageCardRescue {
 }
 
 export interface MessageCardSwap {
-    cardIds: [string, string];
+    cardIds?: [string, string];
 }
 
 export interface MessageCardKill {

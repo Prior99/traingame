@@ -2,10 +2,11 @@ import * as React from "react";
 import classNames from "classnames";
 import { observer } from "mobx-react";
 import { external, inject } from "tsdi";
-import { Game } from "../../game";
+import { Game, LoadingFeatures } from "../../game";
 import "./game-phase-swap-cards.scss";
-import { computed } from "mobx";
+import { computed, action } from "mobx";
 import { GameTracks } from "../game-tracks";
+import { Button } from "semantic-ui-react";
 
 export interface GamePhaseSwapCardsProps {
     className?: string;
@@ -24,13 +25,21 @@ export class GamePhaseSwapCards extends React.Component<GamePhaseSwapCardsProps>
         return this.game.swappingUser?.name ?? "";
     }
 
+    @action.bound private handleSwapSkip(): void {
+        this.game.sendCardSwap();
+    }
+
+    @computed private get swapLoading(): boolean {
+        return this.game.loading.has(LoadingFeatures.CARD_SWAP);
+    }
+
     public render(): JSX.Element {
         return (
             <div className={this.classNames}>
                 <div className="GamePhaseSwapCards__instructions">
                     {this.game.canSwap ? (
                         <>
-                            You <b>must</b> swap two cards.
+                            You <b>can</b> swap two cards.
                         </>
                     ) : (
                         <>
@@ -39,6 +48,16 @@ export class GamePhaseSwapCards extends React.Component<GamePhaseSwapCardsProps>
                     )}
                 </div>
                 <GameTracks className="GamePhaseSwapCards__tracks" />
+                {this.game.canSwap && (
+                    <Button
+                        inverted
+                        disabled={this.swapLoading}
+                        loading={this.swapLoading}
+                        onClick={this.handleSwapSkip}
+                        icon="redo"
+                        content="No, thanks"
+                    />
+                )}
             </div>
         );
     }

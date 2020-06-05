@@ -27,7 +27,7 @@ export class GameTracks extends React.Component<GameTracksProps> {
         if (this.game.loading.has(LoadingFeatures.CARD_SWAP)) {
             return;
         }
-        if (this.selectedCards.has(cardId)) {
+        if (!this.selectedCards.has(cardId)) {
             this.selectedCards.add(cardId);
         } else {
             this.selectedCards.delete(cardId);

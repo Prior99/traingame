@@ -13,6 +13,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
     }
 
     &__modifier {
@@ -34,5 +35,17 @@
     &--selected {
         transform: scale(1.2);
         z-index: 10;
+    }
+
+    &__modifiers {
+        padding-left: 15px;
+    }
+
+    &__myIcon {
+        color: white;
+        position: absolute;
+        z-index: 10;
+        top: 5px;
+        left: 5px;
     }
 }

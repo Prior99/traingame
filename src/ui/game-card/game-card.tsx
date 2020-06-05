@@ -1,7 +1,7 @@
 import * as React from "react";
 import classNames from "classnames";
 import "./game-card.scss";
-import { Segment, Form, Button, Popup } from "semantic-ui-react";
+import { Segment, Form, Button, Popup, Icon } from "semantic-ui-react";
 import { Card, Game, Modifier, LoadingFeatures } from "../../game";
 import { observer } from "mobx-react";
 import { computed, action, observable } from "mobx";
@@ -88,6 +88,7 @@ export class GameCard extends React.Component<GameCardProps> {
                 trigger={
                     <Segment.Group raised className={this.className} onClick={this.handleClick}>
                         <Segment inverted color={this.color} className="GameCard__title">
+                        {this.card?.userId === this.game.userId && <Icon className="GameCard__myIcon" name="heart" />}
                             {this.card?.title}
                         </Segment>
                         {this.props.canAddModifier && (
@@ -129,13 +130,13 @@ export class GameCard extends React.Component<GameCardProps> {
                 disabled={!this.props.showModifiers || this.modifiers.length === 0}
                 open={Boolean(this.props.showModifiers && this.modifiers.length > 0)}
             >
-                <div className="GameCard__modifiers">
+                <ul className="GameCard__modifiers">
                     {this.modifiers.map((modifier) => (
-                        <div className="GameCard__modifier" key={modifier.modifierId}>
-                            <div className="GameCard__modifierTitle">{modifier.title}</div>
-                        </div>
+                        <li className="GameCard__modifier" key={modifier.modifierId}>
+                            {modifier.title}
+                        </li>
                     ))}
-                </div>
+                </ul>
             </Popup>
         );
     }

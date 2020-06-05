@@ -44,4 +44,8 @@
     &:hover > .GameTrack__killer {
         transform: translateX(0);
     }
+
+    &__killed > .GameTrack__killer {
+        transform: translateX(0);
+    }
 }

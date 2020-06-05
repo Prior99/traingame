@@ -77,6 +77,7 @@ export class Game {
     @observable public cards = new Map<string, Card>();
     @observable public modifiers = new Map<string, Modifier>();
     @observable public swapped = new Set<string>();
+    @observable public decidedTrack: Track | undefined;
 
     private messageGameState?: MessageFactory<MessageType, MessageGameState>;
     private messageStartGame?: MessageFactory<MessageType, MessageStartGame>;
@@ -345,6 +346,7 @@ export class Game {
     }
 
     @action.bound private startTurn(): void {
+        this.decidedTrack = undefined;
         for (const { id } of this.userList) {
             const state = this.userStates.get(id);
             if (!state) {
@@ -363,11 +365,21 @@ export class Game {
     }
 
     public getOpposingTrack(userId: string): Track {
-        const existingCard = Array.from(this.cards.values()).find(card => card.userId === userId);
+        const existingCard = Array.from(this.cards.values()).find((card) => card.userId === userId);
         if (!existingCard) {
             throw new Error(`Missing card for user ${userId}`);
         }
         return existingCard.track === Track.TRACK_A ? Track.TRACK_B : Track.TRACK_A;
+    }
+
+    @action.bound public rearrangeTracks(): void {
+        const cards = Array.from(this.cards.values())
+            .filter((card) => !card.removed)
+            .sort((a, b) => a.cardId.localeCompare(b.cardId));
+        for (let index = 0; index < cards.length; ++index) {
+            const track = index % 2 === 0 ? Track.TRACK_A : Track.TRACK_B;
+            cards[index].track = track;
+        }
     }
 
     @action.bound public async initialize(networkId?: string, userId?: string): Promise<void> {
@@ -398,7 +410,7 @@ export class Game {
         this.messageNextRound = this.peer.message<MessageNextRound>(MessageType.NEXT_ROUND);
 
         this.messageGameState?.subscribe(
-            action(({ config, userStates, cards, modifiers, turnOrder, round, phase, swapped }) => {
+            action(({ config, userStates, cards, modifiers, turnOrder, round, phase, swapped, decidedTrack }) => {
                 this.config = config;
                 this.userStates = new Map(userStates);
                 this.cards = new Map(cards.map((card) => [card.cardId, card]));
@@ -407,6 +419,7 @@ export class Game {
                 this.round = round;
                 this.phase = phase;
                 this.swapped = new Set(swapped);
+                this.decidedTrack = decidedTrack;
             }),
         );
         this.messageCardAdd.subscribe(({ title, cardId, cardType }, userId) => {
@@ -430,6 +443,7 @@ export class Game {
                 return;
             }
             if (this.phase === GamePhase.WRITE_GOOD) {
+                this.rearrangeTracks();
                 if (this.allManiacs.length % 2 !== 0) {
                     this.phase = GamePhase.RESCUE;
                 } else {
@@ -454,11 +468,7 @@ export class Game {
             }
             this.handleRescue(card);
             card.removed = true;
-            const cards = Array.from(this.cards.values()).filter(card => !card.removed).sort((a, b) => a.cardId.localeCompare(b.cardId));
-            for (let index = 0; index < cards.length; ++index) {
-                const track = index % 2 === 0 ? Track.TRACK_A : Track.TRACK_B;
-                cards[index].track = track;
-            }
+            this.rearrangeTracks();
             if (this.allManiacs.length >= 4) {
                 this.phase = GamePhase.SWAP_CARDS;
             } else {
@@ -494,14 +504,17 @@ export class Game {
             }
         });
         this.messageDecide.subscribe(({ track }) => {
-            Array.from(this.cards.values()).filter(card => !card.removed).forEach((card) => {
-                if (card.track === track) {
-                    this.handleKill(card);
-                } else {
-                    this.handleRescue(card);
-                }
-            });
-            this.phase = GamePhase.SCORES;
+            this.decidedTrack = track;
+            Array.from(this.cards.values())
+                .filter((card) => !card.removed)
+                .forEach((card) => {
+                    if (card.track === track) {
+                        this.handleKill(card);
+                    } else {
+                        this.handleRescue(card);
+                    }
+                });
+            setTimeout(() => this.phase = GamePhase.SCORES, 3000);
         });
         this.messageStartGame.subscribe(({ config }) => {
             this.config = config;
@@ -530,6 +543,7 @@ export class Game {
                     round: this.round,
                     phase: this.phase,
                     swapped: Array.from(this.swapped.values()),
+                    decidedTrack: this.decidedTrack,
                 },
                 user.id,
             );

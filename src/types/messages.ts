@@ -34,6 +34,7 @@ export interface MessageGameState {
     round: number;
     phase: GamePhase;
     swapped: string[];
+    decidedTrack: Track | undefined;
 }
 
 export interface MessageWelcome {

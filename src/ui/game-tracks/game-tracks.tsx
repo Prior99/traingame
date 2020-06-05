@@ -23,11 +23,11 @@ export class GameTracks extends React.Component<GameTracksProps> {
         return classNames("GameTracks", this.props.className);
     }
 
-    @action.bound private async handleSelect(selected: boolean, cardId: string): Promise<void> {
+    @action.bound private async handleSelect(cardId: string): Promise<void> {
         if (this.game.loading.has(LoadingFeatures.CARD_SWAP)) {
             return;
         }
-        if (selected) {
+        if (this.selectedCards.has(cardId)) {
             this.selectedCards.add(cardId);
         } else {
             this.selectedCards.delete(cardId);

@@ -12,7 +12,7 @@ export interface GameTrackProps {
     track: Track;
     className?: string;
     popupPosition?: "bottom center" | "top center";
-    onCardSelect?: (selected: boolean, cardId: string) => void;
+    onCardSelect?: (cardId: string) => void;
     selectedCards: Set<string>;
     onClick?: (track: Track) => void;
 }
@@ -29,6 +29,7 @@ export class GameTrack extends React.Component<GameTrackProps> {
     @computed private get className(): string {
         return classNames("GameTrack", this.props.className, {
             "GameTrack--killable": this.canKill,
+            "GameTrack--killed": this.game.decidedTrack === this.props.track,
         });
     }
 
@@ -58,15 +59,7 @@ export class GameTrack extends React.Component<GameTrackProps> {
                             showUser={false}
                             className="GameTrack__gameCard"
                             selected={this.props.selectedCards.has(card.cardId)}
-                            onClick={
-                                this.props.onCardSelect
-                                    ? () =>
-                                          this.props.onCardSelect!(
-                                              !this.props.selectedCards.has(card.cardId),
-                                              card.cardId,
-                                          )
-                                    : undefined
-                            }
+                            onClick={this.props.onCardSelect ? () => this.props.onCardSelect!(card.cardId) : undefined}
                         />
                     ))}
                 {this.canKill && <div className="GameTrack__killer">Kill them all</div>}

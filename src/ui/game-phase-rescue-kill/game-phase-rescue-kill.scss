@@ -1,2 +1,27 @@
+@import "../../variables.scss";
+
 .GamePhaseRescueKill {
+    @include container;
+    background-color: #1b1c1d;
+
+    &__instructions {
+        @include instruction;
+        color: #fff;
+    }
+
+    &__cards {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: stretch;
+        padding: $gutter;
+    }
+
+    &__card {
+        $margin: #{$gutter / 2};
+        margin: $margin 0 $margin $margin !important;
+        flex: 1 1 100px;
+        max-width: 300px;
+    }
 }

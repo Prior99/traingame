@@ -1,2 +1,26 @@
+@import "../../variables.scss";
+
 .GamePhaseWriteCards {
+    @include container;
+
+    &--bad {
+        background-color: #db2828;
+    }
+
+    &--good {
+        background-color: #21ba45;
+    }
+
+    &--conductor {
+        background-color: #2185d0;
+    }
+
+    &__instructions, &__conductor {
+        @include instruction;
+        color: #fff;
+    }
+
+    &__form {
+        width: 500px !important;
+    }
 }

@@ -5,18 +5,20 @@ const Webpack = require("webpack");
 const path = require("path");
 const gitRevision = new GitRevisionPlugin({ lightweightTags: true });
 
-
-module.exports = {
+module.exports = (env, options) => ({
     entry: {
         bundle: path.join(__dirname, "src", "index.tsx"),
     },
     output: {
         path: path.join(__dirname, "dist"),
         filename: "bundle.js",
-        publicPath: "dist/"
+        publicPath: "dist/",
     },
     resolve: {
         extensions: [".js", ".jsx", ".ts", ".tsx"],
+    },
+    devServer: {
+        hot: true,
     },
     module: {
         rules: [
@@ -37,12 +39,13 @@ module.exports = {
             {
                 test: /\.scss$/,
                 use: [
-                    { loader: MiniCssExtractPlugin.loader, options: { publicPath: "." } },
+                    options.mode === "production"
+                        ? { loader: MiniCssExtractPlugin.loader, options: { publicPath: "." } }
+                        : { loader: "style-loader" },
                     { loader: "css-loader" },
                     { loader: "sass-loader" },
-                ]
-            }
-
+                ],
+            },
         ],
     },
     devtool: "source-map",
@@ -50,10 +53,8 @@ module.exports = {
         new Webpack.DefinePlugin({
             // Taken and adapted from the official README.
             // See: https://www.npmjs.com/package/git-revision-webpack-plugin
-            "SOFTWARE_VERSION": JSON.stringify(gitRevision.version())
+            SOFTWARE_VERSION: JSON.stringify(gitRevision.version()),
         }),
         new MiniCssExtractPlugin(),
-    ]
-};
-
-
+    ],
+});

@@ -5,7 +5,7 @@ import { external, inject } from "tsdi";
 import { Game } from "../../game";
 import "./game-phase-rescue-kill.scss";
 import { computed, action } from "mobx";
-import { GamePhase, CardType } from "../../types";
+import { GamePhase, CardType, Track } from "../../types";
 import { GameCard } from "../game-card";
 
 export interface GamePhaseRescueKillProps {
@@ -65,7 +65,12 @@ export class GamePhaseRescueKill extends React.Component<GamePhaseRescueKillProp
                                 return card.cardType === CardType.GOOD;
                             }
                             if (this.game.phase === GamePhase.KILL) {
-                                return card.cardType === CardType.BAD;
+                                const fullestTrack =
+                                    this.game.cardsOnTrack(Track.TRACK_A).filter(card => !card.removed).length >
+                                    this.game.cardsOnTrack(Track.TRACK_B).filter(card => !card.removed).length
+                                        ? Track.TRACK_A
+                                        : Track.TRACK_B;
+                                return card.cardType === CardType.BAD && card.track === fullestTrack;
                             }
                         })
                         .map((card) => (

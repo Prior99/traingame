@@ -20,10 +20,23 @@ export class GamePhaseDecision extends React.Component<GamePhaseDecisionProps> {
         return classNames(this.props.className, "GamePhaseDecision");
     }
 
+    @computed private get conductorName(): string {
+        return this.game.conductor?.name ?? "";
+    }
+
     public render(): JSX.Element {
         return (
             <div className={this.classNames}>
-                <GameTracks />
+                <div className="GamePhaseDecision__instructions">
+                    {this.game.isConductor ? (
+                        <>Decide for one track to eradicate.</>
+                    ) : (
+                        <>
+                            Waiting for <b>{this.conductorName}</b> to make a decision...
+                        </>
+                    )}
+                </div>
+                <GameTracks className="GamePhaseDecision__tracks" />
             </div>
         );
     }

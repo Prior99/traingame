@@ -1,2 +1,38 @@
+@import "../../variables.scss";
+
 .GameCard {
+    text-align: center;
+    transition: all ease 0.5s;
+    display: flex;
+
+    &__title {
+        font-size: 16pt !important;
+        text-transform: uppercase;
+        line-height: 1.2em;
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &__modifier {
+        .button {
+            height: 36px;
+            margin-top: 1px !important;
+        }
+    }
+
+    &--clickable {
+        cursor: pointer;
+
+        &:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+    }
+
+    &--selected {
+        transform: scale(1.2);
+        z-index: 10;
+    }
 }

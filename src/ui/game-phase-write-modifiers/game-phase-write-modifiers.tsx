@@ -24,7 +24,13 @@ export class GamePhaseWriteModifiers extends React.Component<GamePhaseWriteModif
         return (
             <div className={this.classNames}>
                 <div className="GamePhaseWriteModifiers__instructions">
-                    Add a modifier to <b>one</b> card of your choice.
+                    {this.game.isConductor || Boolean(this.game.submittedModifier) ? (
+                        <>Waiting for {this.game.missingModifierUsers.map((user) => user.name).join(", ")}...</>
+                    ) : (
+                        <>
+                            Add a modifier to <b>one</b> card of your choice.
+                        </>
+                    )}
                 </div>
                 <GameTracks className="GamePhaseWriteModifiers__tracks" />
             </div>

@@ -7,7 +7,6 @@ import { computed, observable, action } from "mobx";
 import { inject, external } from "tsdi";
 import { Track, GamePhase } from "../../types";
 import { GameTrack } from "../game-track/game-track";
-import { Button } from "semantic-ui-react";
 
 export interface GameTracksProps {
     className?: string;
@@ -24,14 +23,18 @@ export class GameTracks extends React.Component<GameTracksProps> {
         return classNames("GameTracks", this.props.className);
     }
 
-    @action.bound private handleSelect(selected: boolean, cardId: string): void {
+    @action.bound private async handleSelect(selected: boolean, cardId: string): Promise<void> {
+        if (this.game.loading.has(LoadingFeatures.CARD_SWAP)) {
+            return;
+        }
         if (selected) {
             this.selectedCards.add(cardId);
         } else {
             this.selectedCards.delete(cardId);
         }
         if (this.selectedCards.size === 2) {
-            this.game.sendCardSwap(Array.from(this.selectedCards.values()) as [string, string]);
+            await this.game.sendCardSwap(Array.from(this.selectedCards.values()) as [string, string]);
+            this.selectedCards.clear();
         }
     }
 
@@ -47,25 +50,24 @@ export class GameTracks extends React.Component<GameTracksProps> {
         return this.game.loading.has(LoadingFeatures.DECIDE);
     }
 
+    private isCardOnTrackSelected(track: Track): boolean {
+        if (this.selectedCards.size !== 1) {
+            return false;
+        }
+        return this.game.cards.get(Array.from(this.selectedCards.values())[0])?.track === track;
+    }
+
     public render(): JSX.Element {
         return (
             <div className={this.className}>
                 {[Track.TRACK_A, Track.TRACK_B].map((track) => (
                     <div key={track} className="GameTracks__trackWrapper">
-                        {this.decideTrack && (
-                            <Button
-                                loading={this.decideLoading}
-                                disabled={this.decideLoading}
-                                icon="thumbs down"
-                                content="Kill them"
-                                onClick={() => this.handleClick(track)}
-                            />
-                        )}
                         <GameTrack
+                            onClick={!this.decideLoading && this.decideTrack ? () => this.handleClick(track) : undefined}
                             track={track}
                             className="GameTracks__track"
                             popupPosition={track === Track.TRACK_A ? "top center" : "bottom center"}
-                            onCardSelect={this.game.canSwap ? this.handleSelect : undefined}
+                            onCardSelect={this.game.canSwap && !this.isCardOnTrackSelected(track) ? this.handleSelect : undefined}
                             selectedCards={this.selectedCards}
                         />
                     </div>

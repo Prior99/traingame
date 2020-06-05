@@ -3,7 +3,7 @@ import classNames from "classnames";
 import "./game-track.scss";
 import { Game, Card } from "../../game";
 import { observer } from "mobx-react";
-import { computed } from "mobx";
+import { computed, action } from "mobx";
 import { inject, external } from "tsdi";
 import { Track, GamePhase } from "../../types";
 import { GameCard } from "../game-card";
@@ -14,6 +14,7 @@ export interface GameTrackProps {
     popupPosition?: "bottom center" | "top center";
     onCardSelect?: (selected: boolean, cardId: string) => void;
     selectedCards: Set<string>;
+    onClick?: (track: Track) => void;
 }
 
 @external
@@ -26,25 +27,49 @@ export class GameTrack extends React.Component<GameTrackProps> {
     }
 
     @computed private get className(): string {
-        return classNames("GameTrack", this.props.className);
+        return classNames("GameTrack", this.props.className, {
+            "GameTrack--killable": this.canKill,
+        });
+    }
+
+    @computed private get canKill(): boolean {
+        return this.game.isConductor && this.game.phase === GamePhase.DECISION;
+    }
+
+    @action.bound private handleClick(): void {
+        if (!this.props.onClick) {
+            return;
+        }
+        this.props.onClick(this.props.track);
     }
 
     public render(): JSX.Element {
         return (
-            <div className={this.className}>
-                {this.cards.map(card => (
-                    <GameCard
-                        key={card.cardId}
-                        cardId={card.cardId}
-                        canAddModifier={this.game.canAddModifier}
-                        popupPosition={this.props.popupPosition}
-                        showModifiers={this.game.phase !== GamePhase.WRITE_MODIFIERS}
-                        showUser={false}
-                        className="Track__gameCard"
-                        selected={this.props.selectedCards.has(card.cardId)}
-                        onSelect={this.props.onCardSelect ? this.props.onCardSelect : undefined}
-                    />
-                ))}
+            <div className={this.className} onClick={this.handleClick}>
+                {this.cards
+                    .filter((card) => !card.removed)
+                    .map((card) => (
+                        <GameCard
+                            key={card.cardId}
+                            cardId={card.cardId}
+                            canAddModifier={this.game.canAddModifier}
+                            popupPosition={this.props.popupPosition}
+                            showModifiers={this.game.phase !== GamePhase.WRITE_MODIFIERS}
+                            showUser={false}
+                            className="GameTrack__gameCard"
+                            selected={this.props.selectedCards.has(card.cardId)}
+                            onClick={
+                                this.props.onCardSelect
+                                    ? () =>
+                                          this.props.onCardSelect!(
+                                              !this.props.selectedCards.has(card.cardId),
+                                              card.cardId,
+                                          )
+                                    : undefined
+                            }
+                        />
+                    ))}
+                {this.canKill && <div className="GameTrack__killer">Kill them all</div>}
             </div>
         );
     }

@@ -237,7 +237,11 @@ export class Game {
     }
 
     @computed public get canSwap(): boolean {
-        return this.swappingUser?.id === this.userId;
+        return this.swappingUser?.id === this.userId && this.phase === GamePhase.SWAP_CARDS;
+    }
+
+    @computed public get submittedModifier(): Modifier | undefined {
+        return Array.from(this.modifiers.values()).find((modifier) => modifier.userId === this.userId);
     }
 
     @computed public get submittedCard(): Card | undefined {
@@ -315,6 +319,31 @@ export class Game {
         return [Track.TRACK_A, Track.TRACK_B][this.turnOrder.indexOf(userId) % 2];
     }
 
+    @computed public get finishedModifierUsers(): AppUser[] {
+        const modifiers = Array.from(this.modifiers.values());
+        return this.allManiacs.filter((user) => modifiers.some((modifier) => modifier.userId === user.id));
+    }
+
+    @computed public get finishedCardUsers(): AppUser[] {
+        const cards = Array.from(this.cards.values());
+        if (this.phase === GamePhase.WRITE_BAD) {
+            return this.allManiacs.filter((user) =>
+                cards.some((card) => card.cardType === CardType.BAD && card.userId === user.id),
+            );
+        }
+        return this.allManiacs.filter((user) =>
+            cards.some((card) => card.cardType === CardType.GOOD && card.userId === user.id),
+        );
+    }
+
+    @computed public get missingModifierUsers(): AppUser[] {
+        return this.allManiacs.filter((user) => !this.finishedModifierUsers.some((other) => other.id === user.id));
+    }
+
+    @computed public get missingCardUsers(): AppUser[] {
+        return this.allManiacs.filter((user) => !this.finishedCardUsers.some((other) => other.id === user.id));
+    }
+
     @action.bound private startTurn(): void {
         for (const { id } of this.userList) {
             const state = this.userStates.get(id);
@@ -331,6 +360,14 @@ export class Game {
             throw new Error("Network not initialized.");
         }
         this.phase = GamePhase.WRITE_GOOD;
+    }
+
+    public getOpposingTrack(userId: string): Track {
+        const existingCard = Array.from(this.cards.values()).find(card => card.userId === userId);
+        if (!existingCard) {
+            throw new Error(`Missing card for user ${userId}`);
+        }
+        return existingCard.track === Track.TRACK_A ? Track.TRACK_B : Track.TRACK_A;
     }
 
     @action.bound public async initialize(networkId?: string, userId?: string): Promise<void> {
@@ -373,12 +410,13 @@ export class Game {
             }),
         );
         this.messageCardAdd.subscribe(({ title, cardId, cardType }, userId) => {
+            const track = cardType === CardType.GOOD ? this.getUserDefaultTrack(userId) : this.getOpposingTrack(userId);
             this.cards.set(cardId, {
                 title,
                 cardId,
                 userId,
                 cardType,
-                track: this.getUserDefaultTrack(userId),
+                track,
                 removed: false,
             });
             if (
@@ -401,8 +439,7 @@ export class Game {
                         this.phase = GamePhase.WRITE_BAD;
                     }
                 }
-            }
-            if (this.phase === GamePhase.WRITE_BAD) {
+            } else if (this.phase === GamePhase.WRITE_BAD) {
                 if (this.allManiacs.length % 2 !== 0) {
                     this.phase = GamePhase.KILL;
                 } else {
@@ -417,6 +454,11 @@ export class Game {
             }
             this.handleRescue(card);
             card.removed = true;
+            const cards = Array.from(this.cards.values()).filter(card => !card.removed).sort((a, b) => a.cardId.localeCompare(b.cardId));
+            for (let index = 0; index < cards.length; ++index) {
+                const track = index % 2 === 0 ? Track.TRACK_A : Track.TRACK_B;
+                cards[index].track = track;
+            }
             if (this.allManiacs.length >= 4) {
                 this.phase = GamePhase.SWAP_CARDS;
             } else {
@@ -452,7 +494,7 @@ export class Game {
             }
         });
         this.messageDecide.subscribe(({ track }) => {
-            this.cards.forEach((card) => {
+            Array.from(this.cards.values()).filter(card => !card.removed).forEach((card) => {
                 if (card.track === track) {
                     this.handleKill(card);
                 } else {

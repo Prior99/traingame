@@ -20,9 +20,9 @@ export class GamePhaseWriteCards extends React.Component<GamePhaseWriteCardsProp
 
     @computed private get classNames(): string {
         return classNames(this.props.className, "GamePhaseWriteCards", {
-            "GamePhaseWriteCard--good": this.cardType === CardType.GOOD,
-            "GamePhaseWriteCard--bad": this.cardType === CardType.BAD,
-            "GamePhaseWriteCard--conductor": this.game.isConductor,
+            "GamePhaseWriteCards--good": this.cardType === CardType.GOOD,
+            "GamePhaseWriteCards--bad": this.cardType === CardType.BAD,
+            "GamePhaseWriteCards--conductor": this.game.isConductor,
         });
     }
 
@@ -41,6 +41,7 @@ export class GamePhaseWriteCards extends React.Component<GamePhaseWriteCardsProp
         evt.preventDefault();
         const { cardType, title } = this;
         await this.game.sendCardAdd(title, cardType);
+        this.title = "";
     }
 
     @computed private get disabled(): boolean {
@@ -58,44 +59,43 @@ export class GamePhaseWriteCards extends React.Component<GamePhaseWriteCardsProp
     public render(): JSX.Element {
         return (
             <div className={this.classNames}>
-                {this.game.isConductor ? (
-                    <div className="GamePhaseWriteCard__conductor">Please wait for other players...</div>
-                ) : (
-                    <>
-                        <div className="GamePhaseWriteModifiers__instructions">
-                            {this.cardType === CardType.GOOD ? (
-                                <>
-                                    Write something <b>good</b> that {this.conductorName} would consider worth rescuing.
-                                </>
-                            ) : (
-                                <>
-                                    Write something <b>bad</b> that {this.conductorName} would want to see run over by a
-                                    train..
-                                </>
-                            )}
-                        </div>
-                        <Form className="GamePhaseWriteCard__form" onSubmit={this.handleSubmit}>
+                <>
+                    <div className="GamePhaseWriteCards__instructions">
+                        {this.game.isConductor || Boolean(this.game.submittedCard) ? (
+                            <>Waiting for {this.game.missingCardUsers.map((user) => user.name).join(", ")}...</>
+                        ) : this.cardType === CardType.GOOD ? (
+                            <>
+                                Write something <b>good</b> that {this.conductorName} would rescue.
+                            </>
+                        ) : (
+                            <>
+                                Write something <b>bad</b> that {this.conductorName} would kill.
+                            </>
+                        )}
+                    </div>
+                    {!this.game.isConductor && (
+                        <Form className="GamePhaseWriteCards__form" onSubmit={this.handleSubmit}>
                             <Form.Field>
-                                <label>Title</label>
                                 <Form.Input
                                     disabled={this.disabled}
                                     value={this.title}
                                     onChange={this.handleTitleChange}
+                                    inverted
                                 />
                             </Form.Field>
                             <Form.Field>
-                                <label>Done</label>
                                 <Form.Button
-                                    disabled={this.disabled}
+                                    disabled={this.disabled || this.title.length === 0}
                                     loading={this.loading}
                                     content="Okay"
                                     icon="check"
-                                    primary
+                                    fluid
+                                    inverted
                                 />
                             </Form.Field>
                         </Form>
-                    </>
-                )}
+                    )}
+                </>
             </div>
         );
     }

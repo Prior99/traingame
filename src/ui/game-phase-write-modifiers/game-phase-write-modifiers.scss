@@ -1,2 +1,15 @@
+@import "../../variables.scss";
+
 .GamePhaseWriteModifiers {
+    @include container;
+    background-color: #1b1c1d;
+
+    &__instructions {
+        @include instruction;
+        color: #fff;
+    }
+
+    &__tracks {
+        width: 100%;
+    }
 }

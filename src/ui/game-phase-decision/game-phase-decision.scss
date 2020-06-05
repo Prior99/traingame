@@ -1,2 +1,16 @@
+@import "../../variables.scss";
+
 .GamePhaseDecision {
+    @include container;
+    background-color: #1b1c1d;
+
+    &__instructions {
+        @include instruction;
+        color: #fff;
+        padding-bottom: 100px;
+    }
+
+    &__tracks {
+        width: 100%;
+    }
 }

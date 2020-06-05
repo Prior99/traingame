@@ -1,2 +1,17 @@
+@import "../../variables.scss";
+
 .GameTracks {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    grid-auto-rows: 1fr;
+    grid-column-gap: $gutter;
+    position: relative;
+
+    &__trackWrapper {
+        margin-bottom: $gutter;
+    }
+
+    &__track {
+        height: 100%;
+    }
 }

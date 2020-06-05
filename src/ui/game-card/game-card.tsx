@@ -1,7 +1,7 @@
 import * as React from "react";
 import classNames from "classnames";
 import "./game-card.scss";
-import { Segment, Checkbox, Form, Button, Popup } from "semantic-ui-react";
+import { Segment, Form, Button, Popup } from "semantic-ui-react";
 import { Card, Game, Modifier, LoadingFeatures } from "../../game";
 import { observer } from "mobx-react";
 import { computed, action, observable } from "mobx";
@@ -12,7 +12,6 @@ import { CardType, AppUser } from "../../types";
 export interface GameCardProps {
     cardId: string;
     selected?: boolean;
-    onSelect?: (selected: boolean, cardId: string) => void;
     className?: string;
     showUser?: boolean;
     canAddModifier?: boolean;
@@ -46,19 +45,13 @@ export class GameCard extends React.Component<GameCardProps> {
     @computed private get className(): string {
         return classNames("GameCard", this.props.className, {
             "GameCard--clickable": this.props.onClick,
+            "GameCard--selected": this.props.selected,
             "GameCard--removed": this.card?.removed,
         });
     }
 
     @computed private get color(): SemanticCOLORS {
         return this.card?.cardType === CardType.BAD ? "red" : "green";
-    }
-
-    @action.bound private handleSelectChange(_evt: React.SyntheticEvent<HTMLInputElement>): void {
-        if (!this.props.onSelect) {
-            return;
-        }
-        this.props.onSelect(!this.props.selected, this.props.cardId);
     }
 
     @action.bound private handleAddModifierClick(): void {
@@ -69,7 +62,7 @@ export class GameCard extends React.Component<GameCardProps> {
         this.modifier = evt.currentTarget.value;
     }
 
-    @action.bound private handleModifierSubmit(evt: React.SyntheticEvent<HTMLFormElement>): void {
+    @action.bound private handleModifierSubmit(evt: React.SyntheticEvent<unknown>): void {
         evt.preventDefault();
         this.game.sendCardAddModifier(this.modifier ?? "", this.props.cardId);
     }
@@ -93,47 +86,46 @@ export class GameCard extends React.Component<GameCardProps> {
         return (
             <Popup
                 trigger={
-                    <Segment className={this.className} inverted color={this.color} onClick={this.handleClick}>
-                        <div className="GameCard__title">{this.card?.title}</div>
-                        {this.props.canAddModifier &&
-                            !this.card?.removed &&
-                            (this.modifier === undefined ? (
-                                <Button icon="plus" content="Add modifier" onClick={this.handleAddModifierClick} />
-                            ) : (
-                                <Form className="GameCard__select" onSubmit={this.handleModifierSubmit}>
-                                    <Form.Field>
-                                        <label>Modifier</label>
-                                        <Form.Input value={this.modifier} onChange={this.handleChangeModifier} />
-                                    </Form.Field>
-                                    <Form.Field>
-                                        <label>Add Modifier</label>
-                                        <Form.Button
-                                            disabled={this.modifierLoading}
-                                            loading={this.modifierLoading}
-                                            primary
-                                            content="Okay"
-                                            icon="check"
+                    <Segment.Group raised className={this.className} onClick={this.handleClick}>
+                        <Segment inverted color={this.color} className="GameCard__title">
+                            {this.card?.title}
+                        </Segment>
+                        {this.props.canAddModifier && (
+                            <Segment>
+                                {!this.card?.removed &&
+                                    (this.modifier === undefined ? (
+                                        <Button
+                                            size="tiny"
+                                            icon="plus"
+                                            fluid
+                                            content="Add modifier"
+                                            onClick={this.handleAddModifierClick}
                                         />
-                                    </Form.Field>
-                                </Form>
-                            ))}
-                        {this.props.showUser && <div className="GameCard__user">{this.user?.name}</div>}
-                        {this.props.onSelect && !this.card?.removed && (
-                            <div className="GameCard__select">
-                                <label>
-                                    <Checkbox
-                                        disabled={this.swapLoading}
-                                        checked={this.props.selected}
-                                        onChange={this.handleSelectChange}
-                                    />{" "}
-                                    Select
-                                </label>
-                            </div>
+                                    ) : (
+                                        <Form className="GameCard__modifier" onSubmit={this.handleModifierSubmit}>
+                                            <Form.Input
+                                                fluid
+                                                value={this.modifier}
+                                                onChange={this.handleChangeModifier}
+                                                action={
+                                                    <Form.Button
+                                                        disabled={this.modifierLoading}
+                                                        loading={this.modifierLoading}
+                                                        icon="check"
+                                                        attached="right"
+                                                        type="submit"
+                                                        onClick={this.handleModifierSubmit}
+                                                    />
+                                                }
+                                            />
+                                        </Form>
+                                    ))}
+                            </Segment>
                         )}
-                    </Segment>
+                        {this.props.showUser && <Segment className="GameCard__user">{this.user?.name}</Segment>}
+                    </Segment.Group>
                 }
                 position={this.props.popupPosition}
-                inverted
                 disabled={!this.props.showModifiers || this.modifiers.length === 0}
                 open={Boolean(this.props.showModifiers && this.modifiers.length > 0)}
             >

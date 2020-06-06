@@ -17,7 +17,7 @@ build:
   artifacts:
     paths:
       - dist/
-      - images/
+      - assets/
       - manifest.json
       - index.html
 
@@ -32,7 +32,7 @@ pages:
   stage: deploy
   script:
     - mkdir public
-    - mv dist index.html images manifest.json public/
+    - mv dist index.html assets manifest.json public/
   dependencies:
     - build
   artifacts:

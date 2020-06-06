@@ -3,7 +3,7 @@ import NomineLipsum from "nomine-lipsum";
 import { MessageFactory, PeerOptions } from "p2p-networking";
 import { ObservablePeer, createObservableClient, createObservableHost } from "p2p-networking-mobx";
 import { computed, action, observable } from "mobx";
-import { component } from "tsdi";
+import { component, inject } from "tsdi";
 import {
     GameConfig,
     GamePhase,
@@ -23,6 +23,20 @@ import {
 } from "./types";
 import { v4 } from "uuid";
 import { shuffle } from "./utils";
+import {
+    Audios,
+    audioStart,
+    audioAudioAddModifier,
+    audioNextPhase,
+    audioDecisionMade,
+    audioRescue,
+    audioKilled,
+    audioSkipSwap,
+    audioSwap,
+    audioSubmitGood,
+    audioSubmitBad,
+    audioHover,
+} from "./audio";
 
 declare const SOFTWARE_VERSION: string;
 
@@ -66,6 +80,8 @@ export interface Modifier {
 
 @component
 export class Game {
+    @inject private audios!: Audios;
+
     @observable.ref public peer: ObservablePeer<AppUser, MessageType> | undefined = undefined;
     @observable public config: GameConfig = { seed: v4() };
     @observable public phase = GamePhase.LOBBY;
@@ -361,7 +377,7 @@ export class Game {
         if (!this.peer) {
             throw new Error("Network not initialized.");
         }
-        this.phase = GamePhase.WRITE_GOOD;
+        this.nextPhase(GamePhase.WRITE_GOOD);
     }
 
     public getOpposingTrack(userId: string): Track {
@@ -370,6 +386,13 @@ export class Game {
             throw new Error(`Missing card for user ${userId}`);
         }
         return existingCard.track === Track.TRACK_A ? Track.TRACK_B : Track.TRACK_A;
+    }
+
+    @action.bound private nextPhase(phase: GamePhase, mute = false): void {
+        if (!mute) {
+            this.audios.play(audioNextPhase);
+        }
+        this.phase = phase;
     }
 
     @action.bound public rearrangeTracks(): void {
@@ -440,24 +463,29 @@ export class Game {
                     return card.cardType === CardType.GOOD;
                 }).length < this.allManiacs.length
             ) {
+                if (cardType) {
+                    this.audios.play(audioSubmitGood);
+                } else {
+                    this.audios.play(audioSubmitBad);
+                }
                 return;
             }
             if (this.phase === GamePhase.WRITE_GOOD) {
                 this.rearrangeTracks();
                 if (this.allManiacs.length % 2 !== 0) {
-                    this.phase = GamePhase.RESCUE;
+                    this.nextPhase(GamePhase.RESCUE);
                 } else {
                     if (this.allManiacs.length >= 4) {
-                        this.phase = GamePhase.SWAP_CARDS;
+                        this.nextPhase(GamePhase.SWAP_CARDS);
                     } else {
-                        this.phase = GamePhase.WRITE_BAD;
+                        this.nextPhase(GamePhase.WRITE_BAD);
                     }
                 }
             } else if (this.phase === GamePhase.WRITE_BAD) {
                 if (this.allManiacs.length % 2 !== 0) {
-                    this.phase = GamePhase.KILL;
+                    this.nextPhase(GamePhase.KILL);
                 } else {
-                    this.phase = GamePhase.WRITE_MODIFIERS;
+                    this.nextPhase(GamePhase.WRITE_MODIFIERS);
                 }
             }
         });
@@ -469,10 +497,11 @@ export class Game {
             this.handleRescue(card);
             card.removed = true;
             this.rearrangeTracks();
+            this.audios.play(audioRescue);
             if (this.allManiacs.length >= 4) {
-                this.phase = GamePhase.SWAP_CARDS;
+                this.nextPhase(GamePhase.SWAP_CARDS, true);
             } else {
-                this.phase = GamePhase.WRITE_BAD;
+                this.nextPhase(GamePhase.WRITE_BAD, true);
             }
         });
         this.messageCardSwap.subscribe(({ cardIds }, userId) => {
@@ -485,9 +514,10 @@ export class Game {
                     card.track = card.track === Track.TRACK_A ? Track.TRACK_B : Track.TRACK_A;
                 });
             }
+            this.audios.play(audioAudioAddModifier);
             this.swapped.add(userId);
             if (this.allManiacs.every(({ id }) => this.swapped.has(id))) {
-                this.phase = GamePhase.WRITE_BAD;
+                this.nextPhase(GamePhase.WRITE_BAD);
             }
         });
         this.messageCardKill.subscribe(({ cardId }) => {
@@ -497,12 +527,15 @@ export class Game {
             }
             this.handleKill(card);
             card.removed = true;
-            this.phase = GamePhase.WRITE_MODIFIERS;
+            this.audios.play(audioKilled);
+            this.nextPhase(GamePhase.WRITE_MODIFIERS, true);
         });
         this.messageCardAddModifier.subscribe(({ cardId, modifierId, title }, userId) => {
             this.modifiers.set(modifierId, { title, cardId, userId, modifierId });
             if (this.modifiers.size === this.allManiacs.length) {
-                this.phase = GamePhase.DECISION;
+                this.nextPhase(GamePhase.DECISION);
+            } else {
+                this.audios.play(audioAudioAddModifier);
             }
         });
         this.messageDecide.subscribe(({ track }) => {
@@ -516,9 +549,11 @@ export class Game {
                         this.handleRescue(card);
                     }
                 });
-            setTimeout(() => this.phase = GamePhase.SCORES, 3000);
+            this.audios.play(audioDecisionMade);
+            setTimeout(() => this.nextPhase(GamePhase.SCORES), 3000);
         });
         this.messageStartGame.subscribe(({ config }) => {
+            this.audios.play(audioStart);
             this.config = config;
             const rng = randomSeed(config.seed);
             this.turnOrder = shuffle(

@@ -7,6 +7,7 @@ import { computed, action } from "mobx";
 import { inject, external } from "tsdi";
 import { Track, GamePhase } from "../../types";
 import { GameCard } from "../game-card";
+import { Audios, audioKillHover } from "../../audio";
 
 export interface GameTrackProps {
     track: Track;
@@ -21,6 +22,7 @@ export interface GameTrackProps {
 @observer
 export class GameTrack extends React.Component<GameTrackProps> {
     @inject private game!: Game;
+    @inject private audios!: Audios;
 
     @computed private get cards(): Card[] {
         return this.game.cardsOnTrack(this.props.track);
@@ -37,6 +39,13 @@ export class GameTrack extends React.Component<GameTrackProps> {
         return this.game.isConductor && this.game.phase === GamePhase.DECISION;
     }
 
+    @action.bound private handleHover(): void {
+        if (!this.props.onClick) {
+            return;
+        }
+        this.audios.play(audioKillHover);
+    }
+
     @action.bound private handleClick(): void {
         if (!this.props.onClick) {
             return;
@@ -46,7 +55,7 @@ export class GameTrack extends React.Component<GameTrackProps> {
 
     public render(): JSX.Element {
         return (
-            <div className={this.className} onClick={this.handleClick}>
+            <div className={this.className} onClick={this.handleClick} onMouseEnter={this.handleHover}>
                 {this.cards
                     .filter((card) => !card.removed)
                     .map((card) => (

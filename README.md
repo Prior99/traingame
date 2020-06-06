@@ -4,7 +4,7 @@
 
 A P2P multiplayer game of moral dilemmas.
 
-[![play](https://raw.githubusercontent.com/Prior99/traingame/master/images/play.png)](https://prior99.gitlab.io/traingame)
+[![play](https://raw.githubusercontent.com/Prior99/traingame/master/assets/play.png)](https://prior99.gitlab.io/traingame)
 
 ## Contributing
 

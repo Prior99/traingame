@@ -8,6 +8,7 @@ import { computed, action, observable } from "mobx";
 import { inject, external } from "tsdi";
 import { SemanticCOLORS } from "semantic-ui-react/dist/commonjs/generic";
 import { CardType, AppUser } from "../../types";
+import { Audios, audioHover } from "../../audio";
 
 export interface GameCardProps {
     cardId: string;
@@ -24,6 +25,7 @@ export interface GameCardProps {
 @observer
 export class GameCard extends React.Component<GameCardProps> {
     @inject private game!: Game;
+    @inject private audios!: Audios;
 
     @observable private modifier: string | undefined;
 
@@ -71,6 +73,13 @@ export class GameCard extends React.Component<GameCardProps> {
         return this.game.loading.has(LoadingFeatures.CARD_ADD_MODIFIER);
     }
 
+    @action.bound private handleHover(): void {
+        if (!this.props.onClick) {
+            return;
+        }
+        this.audios.play(audioHover);
+    }
+
     @action.bound private handleClick(): void {
         if (!this.props.onClick) {
             return;
@@ -86,7 +95,7 @@ export class GameCard extends React.Component<GameCardProps> {
         return (
             <Popup
                 trigger={
-                    <Segment.Group raised className={this.className} onClick={this.handleClick}>
+                    <Segment.Group raised className={this.className} onClick={this.handleClick} onMouseEnter={this.handleHover}>
                         <Segment inverted color={this.color} className="GameCard__title">
                         {this.card?.userId === this.game.userId && <Icon className="GameCard__myIcon" name="heart" />}
                             {this.card?.title}
